@@ -1,0 +1,101 @@
+import express, { type Request, type Response, type NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { assistantRequestSchema } from './validation.js';
+import { buildFallbackAssistantResponse } from './fallback.js';
+import { callGeminiAssistant } from './gemini.js';
+
+export interface AppConfig {
+  frontendUrl?: string;
+  geminiApiKey?: string;
+  rateLimitMax?: number;
+}
+
+export function createApp(config: AppConfig = {}) {
+  const app = express();
+
+  const allowedOrigins = (config.frontendUrl ?? process.env.FRONTEND_URL ?? 'http://localhost:5173')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    })
+  );
+
+  app.use(
+    cors({
+      origin(origin, callback) {
+        // Allow same-origin / server-to-server / curl without Origin header
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error('Origin not allowed by CORS policy'));
+      },
+      methods: ['GET', 'POST'],
+    })
+  );
+
+  app.use(express.json({ limit: '16kb' }));
+
+  const assistantLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: config.rateLimitMax ?? 25,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      error: 'Too many assistant requests. Please wait a few minutes before trying again.',
+    },
+  });
+
+  app.get('/api/health', (_req: Request, res: Response) => {
+    const apiKey = config.geminiApiKey ?? process.env.GEMINI_API_KEY;
+    res.json({
+      status: 'ok',
+      aiConfigured: Boolean(apiKey && apiKey.trim().length > 0),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.post('/api/assistant', assistantLimiter, async (req: Request, res: Response) => {
+    const parsed = assistantRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Invalid request payload.',
+        details: parsed.error.issues.map((issue) => issue.message),
+      });
+      return;
+    }
+
+    const apiKey = (config.geminiApiKey ?? process.env.GEMINI_API_KEY ?? '').trim();
+
+    if (!apiKey) {
+      res.json(buildFallbackAssistantResponse(parsed.data));
+      return;
+    }
+
+    try {
+      const aiResult = await callGeminiAssistant(parsed.data, apiKey);
+      res.json(aiResult);
+    } catch {
+      // Never log API keys or raw user payloads; fall back deterministically
+      res.json(buildFallbackAssistantResponse(parsed.data));
+    }
+  });
+
+  // Sanitized error handler
+  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    void _next;
+    if (err.message.includes('CORS')) {
+      res.status(403).json({ error: 'Cross-origin request denied.' });
+      return;
+    }
+    res.status(500).json({ error: 'An unexpected server error occurred.' });
+  });
+
+  return app;
+}
