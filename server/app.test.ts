@@ -75,4 +75,20 @@ describe('Express API (/api/health & /api/assistant)', () => {
     expect(r3.status).toBe(429);
     expect(r3.body.error).toMatch(/Too many assistant requests/i);
   });
+
+  it('allows same-host Origin and blocks untrusted cross-origin on /api', async () => {
+    const app = createApp({ geminiApiKey: '', frontendUrl: 'http://localhost:5173' });
+
+    const sameHost = await request(app)
+      .get('/api/health')
+      .set('Host', 'breathewise-urban-air-quality.onrender.com')
+      .set('Origin', 'https://breathewise-urban-air-quality.onrender.com');
+    expect(sameHost.status).toBe(200);
+
+    const untrusted = await request(app)
+      .get('/api/health')
+      .set('Host', 'breathewise-urban-air-quality.onrender.com')
+      .set('Origin', 'https://untrusted.example.com');
+    expect(untrusted.status).toBe(403);
+  });
 });

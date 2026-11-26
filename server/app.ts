@@ -20,7 +20,7 @@ export function createApp(config: AppConfig = {}) {
 
   const allowedOrigins = (config.frontendUrl ?? process.env.FRONTEND_URL ?? 'http://localhost:5173')
     .split(',')
-    .map((o) => o.trim())
+    .map((o) => o.trim().replace(/\/+$/, ''))
     .filter(Boolean);
 
   app.use(
@@ -29,19 +29,29 @@ export function createApp(config: AppConfig = {}) {
     })
   );
 
-  app.use(
+  // Apply CORS allowlist strictly to /api routes (never block static frontend assets)
+  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+    const host = req.get('host');
     cors({
       origin(origin, callback) {
-        // Allow same-origin / server-to-server / curl without Origin header
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        const normalizedOrigin = origin.replace(/\/+$/, '');
+        const isSameHost =
+          Boolean(host) &&
+          (normalizedOrigin === `https://${host}` || normalizedOrigin === `http://${host}`);
+
+        if (isSameHost || allowedOrigins.includes(normalizedOrigin)) {
           callback(null, true);
           return;
         }
         callback(new Error('Origin not allowed by CORS policy'));
       },
       methods: ['GET', 'POST'],
-    })
-  );
+    })(req, res, next);
+  });
 
   app.use(express.json({ limit: '16kb' }));
 
