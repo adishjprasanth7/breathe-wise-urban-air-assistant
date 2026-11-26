@@ -1,4 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -86,6 +88,20 @@ export function createApp(config: AppConfig = {}) {
       res.json(buildFallbackAssistantResponse(parsed.data));
     }
   });
+
+  // Serve built Vite frontend in production (single-service deployment e.g. Render)
+  if (process.env.NODE_ENV === 'production') {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const distDir = path.resolve(__dirname, '../dist');
+    app.use(express.static(distDir));
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/api/')) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(distDir, 'index.html'));
+    });
+  }
 
   // Sanitized error handler
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
