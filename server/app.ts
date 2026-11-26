@@ -1,4 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cors from 'cors';
@@ -89,10 +90,10 @@ export function createApp(config: AppConfig = {}) {
     }
   });
 
-  // Serve built Vite frontend in production (single-service deployment e.g. Render)
-  if (process.env.NODE_ENV === 'production') {
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const distDir = path.resolve(__dirname, '../dist');
+  // Serve built Vite frontend when dist/ exists (single-service deployment e.g. Render)
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distDir = path.resolve(__dirname, '../dist');
+  if (fs.existsSync(distDir)) {
     app.use(express.static(distDir));
     app.get('*', (req: Request, res: Response, next: NextFunction) => {
       if (req.path.startsWith('/api/')) {
