@@ -1,12 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import {
-  Leaf,
-  Plus,
-  Trash2,
-  SlidersHorizontal,
-  Users,
-  Info,
-} from 'lucide-react';
+import { Leaf, Plus, Trash2, SlidersHorizontal, Info } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -24,6 +17,8 @@ import {
   getTodayIsoDate,
   summarizeImpact,
 } from '../utils/impact';
+import { EmissionAssumptionsPanel } from './impact/EmissionAssumptionsPanel';
+import { CommunityInsightsSection } from './impact/CommunityInsightsSection';
 
 interface ImpactTrackerViewProps {
   entries: ImpactLogEntry[];
@@ -32,27 +27,6 @@ interface ImpactTrackerViewProps {
   onDeleteEntry: (id: string) => void;
   onUpdateFactors: (next: EmissionFactors) => void;
 }
-
-const SAMPLE_COMMUNITY_CHALLENGES = [
-  {
-    id: 'no-idle-school',
-    title: 'School Zone No-Idling Pledge',
-    description: 'Turn off engines while waiting in school pickup lines to reduce concentrated NO₂ near children.',
-    badge: 'Sample Challenge',
-  },
-  {
-    id: 'carpool-week',
-    title: '2-Day Neighborhood Carpool',
-    description: 'Coordinate with one neighbor or coworker to share commutes twice this week.',
-    badge: 'Sample Challenge',
-  },
-  {
-    id: 'clean-air-check',
-    title: 'Winter Smog Buddy Check-In',
-    description: 'Check in on elderly neighbors during severe AQI days and share verified indoor filtration tips.',
-    badge: 'Sample Tip',
-  },
-];
 
 export function ImpactTrackerView({
   entries,
@@ -104,6 +78,7 @@ export function ImpactTrackerView({
 
   return (
     <div className="space-y-6">
+      <h1 className="sr-only">Environmental Impact Tracker</h1>
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
@@ -130,7 +105,7 @@ export function ImpactTrackerView({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Leaf className="w-5 h-5 text-forest-700" aria-hidden="true" />
-              <h1 className="text-lg font-bold text-slate-900">Log Low-Emission Action</h1>
+              <h2 className="text-lg font-bold text-slate-900">Log Low-Emission Action</h2>
             </div>
             <button
               type="button"
@@ -215,69 +190,7 @@ export function ImpactTrackerView({
           </form>
 
           {showAssumptions && (
-            <div
-              id="emission-assumptions-panel"
-              className="mt-4 pt-4 border-t border-slate-200 space-y-2.5 text-xs"
-            >
-              <p className="font-semibold text-slate-800">Configurable Emission Factors</p>
-              <div className="grid grid-cols-2 gap-2.5">
-                <label className="block">
-                  <span className="text-slate-600">Car (kg CO₂e/km)</span>
-                  <input
-                    type="number"
-                    step={0.005}
-                    min={0.01}
-                    value={factors.carKgPerKm}
-                    onChange={(e) =>
-                      onUpdateFactors({ ...factors, carKgPerKm: Number(e.target.value) || 0.192 })
-                    }
-                    className="mt-1 w-full px-2.5 py-1.5 border border-slate-300 rounded-lg"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-slate-600">Transit (kg CO₂e/km)</span>
-                  <input
-                    type="number"
-                    step={0.005}
-                    min={0}
-                    value={factors.transitKgPerKm}
-                    onChange={(e) =>
-                      onUpdateFactors({ ...factors, transitKgPerKm: Number(e.target.value) || 0.041 })
-                    }
-                    className="mt-1 w-full px-2.5 py-1.5 border border-slate-300 rounded-lg"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-slate-600">Idling (kg CO₂e/min)</span>
-                  <input
-                    type="number"
-                    step={0.005}
-                    min={0}
-                    value={factors.idlingKgPerMin}
-                    onChange={(e) =>
-                      onUpdateFactors({ ...factors, idlingKgPerMin: Number(e.target.value) || 0.036 })
-                    }
-                    className="mt-1 w-full px-2.5 py-1.5 border border-slate-300 rounded-lg"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-slate-600">Grid (kg CO₂e/kWh)</span>
-                  <input
-                    type="number"
-                    step={0.01}
-                    min={0}
-                    value={factors.electricityKgPerKwh}
-                    onChange={(e) =>
-                      onUpdateFactors({
-                        ...factors,
-                        electricityKgPerKwh: Number(e.target.value) || 0.417,
-                      })
-                    }
-                    className="mt-1 w-full px-2.5 py-1.5 border border-slate-300 rounded-lg"
-                  />
-                </label>
-              </div>
-            </div>
+            <EmissionAssumptionsPanel factors={factors} onUpdateFactors={onUpdateFactors} />
           )}
         </section>
 
@@ -349,35 +262,7 @@ export function ImpactTrackerView({
         )}
       </section>
 
-      {/* Community Insights (Clearly labeled sample content, privacy-preserving) */}
-      <section
-        aria-labelledby="community-heading"
-        className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-forest-700" aria-hidden="true" />
-            <h2 id="community-heading" className="text-base font-bold text-slate-900">
-              Community Pollution Awareness & Challenges
-            </h2>
-          </div>
-          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-            Sample Local-Only Content (No Personal Data Shared)
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-          {SAMPLE_COMMUNITY_CHALLENGES.map((item) => (
-            <article key={item.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-forest-800 bg-forest-50 px-2 py-0.5 rounded">
-                {item.badge}
-              </span>
-              <h3 className="text-sm font-semibold text-slate-900 mt-2">{item.title}</h3>
-              <p className="text-xs text-slate-600 mt-1 leading-relaxed">{item.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+      <CommunityInsightsSection />
     </div>
   );
 }
