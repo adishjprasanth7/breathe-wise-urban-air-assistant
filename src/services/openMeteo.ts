@@ -6,6 +6,7 @@ import type {
   PollutantReadings,
 } from '../types/aqi';
 import { computeUsEpaAqi, getAqiCategory } from '../utils/aqi';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 const AIR_QUALITY_ENDPOINT = 'https://air-quality-api.open-meteo.com/v1/air-quality';
 const GEOCODING_ENDPOINT = 'https://geocoding-api.open-meteo.com/v1/search';
@@ -68,33 +69,6 @@ interface OpenMeteoAirQualityResponse {
   };
 }
 
-async function fetchWithTimeout(
-  url: string,
-  externalSignal?: AbortSignal,
-  timeoutMs = REQUEST_TIMEOUT_MS
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  const onExternalAbort = () => controller.abort();
-  if (externalSignal) {
-    if (externalSignal.aborted) {
-      clearTimeout(timeoutId);
-      throw new DOMException('Aborted', 'AbortError');
-    }
-    externalSignal.addEventListener('abort', onExternalAbort, { once: true });
-  }
-
-  try {
-    return await fetch(url, { signal: controller.signal });
-  } finally {
-    clearTimeout(timeoutId);
-    if (externalSignal) {
-      externalSignal.removeEventListener('abort', onExternalAbort);
-    }
-  }
-}
-
 export async function fetchAirQuality(
   location: LocationInfo,
   options?: { signal?: AbortSignal; forceRefresh?: boolean }
@@ -123,7 +97,10 @@ export async function fetchAirQuality(
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await fetchWithTimeout(url, options?.signal);
+      const response = await fetchWithTimeout(url, {
+        signal: options?.signal,
+        timeoutMs: REQUEST_TIMEOUT_MS,
+      });
       if (!response.ok) {
         if (response.status >= 400 && response.status < 500) {
           throw new Error(`Air quality request rejected (${response.status})`);
@@ -217,7 +194,10 @@ export async function searchCities(
     format: 'json',
   });
 
-  const response = await fetchWithTimeout(`${GEOCODING_ENDPOINT}?${params.toString()}`, signal);
+  const response = await fetchWithTimeout(`${GEOCODING_ENDPOINT}?${params.toString()}`, {
+    signal,
+    timeoutMs: REQUEST_TIMEOUT_MS,
+  });
   if (!response.ok) {
     throw new Error(`City search failed (${response.status})`);
   }

@@ -95,12 +95,34 @@ export function calculateCo2eSavedKg(
   return Math.round(saved * 1000) / 1000;
 }
 
-export function getTodayIsoDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+export function formatLocalIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+export function getTodayIsoDate(): string {
+  return formatLocalIsoDate(new Date());
+}
+
+export function buildWeeklyChartData(
+  entries: ImpactLogEntry[],
+  referenceDate = new Date()
+): Array<{ day: string; date: string; co2eKg: number }> {
+  return Array.from({ length: 7 }, (_, idx) => {
+    const d = new Date(referenceDate);
+    d.setDate(referenceDate.getDate() - (6 - idx));
+    const iso = formatLocalIsoDate(d);
+    const total = entries
+      .filter((e) => e.date === iso)
+      .reduce((sum, e) => sum + e.co2eSavedKg, 0);
+    return {
+      day: d.toLocaleDateString([], { weekday: 'short' }),
+      date: iso,
+      co2eKg: Math.round(total * 100) / 100,
+    };
+  });
 }
 
 export function summarizeImpact(entries: ImpactLogEntry[], referenceDate = getTodayIsoDate()) {

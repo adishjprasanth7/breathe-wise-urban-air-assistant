@@ -19,6 +19,7 @@ import {
 import type { EmissionFactors, ImpactActionType, ImpactLogEntry } from '../types/impact';
 import {
   IMPACT_ACTION_DEFINITIONS,
+  buildWeeklyChartData,
   calculateCo2eSavedKg,
   getTodayIsoDate,
   summarizeImpact,
@@ -99,19 +100,7 @@ export function ImpactTrackerView({
     onAddEntry(entry);
   };
 
-  // Build 7-day chart data
-  const chartData = Array.from({ length: 7 }, (_, idx) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - idx));
-    const iso = d.toISOString().slice(0, 10);
-    const total = entries
-      .filter((e) => e.date === iso)
-      .reduce((sum, e) => sum + e.co2eSavedKg, 0);
-    return {
-      day: d.toLocaleDateString([], { weekday: 'short' }),
-      co2eKg: Math.round(total * 100) / 100,
-    };
-  });
+  const chartData = buildWeeklyChartData(entries);
 
   return (
     <div className="space-y-6">
@@ -146,6 +135,8 @@ export function ImpactTrackerView({
             <button
               type="button"
               onClick={() => setShowAssumptions((s) => !s)}
+              aria-expanded={showAssumptions}
+              aria-controls="emission-assumptions-panel"
               className="inline-flex items-center gap-1.5 text-xs font-medium text-forest-800 bg-forest-50 px-2.5 py-1.5 rounded-lg border border-forest-200"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
@@ -182,7 +173,7 @@ export function ImpactTrackerView({
                   type="number"
                   min={0.1}
                   max={1000}
-                  step={0.5}
+                  step="any"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white"
@@ -224,7 +215,10 @@ export function ImpactTrackerView({
           </form>
 
           {showAssumptions && (
-            <div className="mt-4 pt-4 border-t border-slate-200 space-y-2.5 text-xs">
+            <div
+              id="emission-assumptions-panel"
+              className="mt-4 pt-4 border-t border-slate-200 space-y-2.5 text-xs"
+            >
               <p className="font-semibold text-slate-800">Configurable Emission Factors</p>
               <div className="grid grid-cols-2 gap-2.5">
                 <label className="block">

@@ -127,13 +127,20 @@ export function LocationSelector({
               <input
                 id="city-search-input"
                 type="text"
+                role="combobox"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => results.length > 0 && setIsOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setIsOpen(false);
+                  }
+                }}
                 placeholder="Search city (e.g. Delhi, London)"
                 className="w-full pl-9 pr-8 py-2 text-sm border border-slate-300 rounded-xl bg-slate-50 focus:bg-white text-slate-900 placeholder:text-slate-500"
                 aria-autocomplete="list"
                 aria-expanded={isOpen}
+                aria-controls="city-search-listbox"
               />
               {searching && (
                 <Loader2
@@ -145,12 +152,13 @@ export function LocationSelector({
 
             {isOpen && results.length > 0 && (
               <ul
+                id="city-search-listbox"
                 role="listbox"
                 aria-label="Matching cities"
                 className="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-auto py-1"
               >
                 {results.map((city) => (
-                  <li key={city.id}>
+                  <li key={city.id} role="option" aria-selected={false}>
                     <button
                       type="button"
                       onClick={() => handleSelectCity(city)}

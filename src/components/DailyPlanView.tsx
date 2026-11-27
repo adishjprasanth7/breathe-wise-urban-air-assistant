@@ -1,7 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import {
-  CheckCircle2,
-  Circle,
   Plus,
   RotateCcw,
   Sun,
@@ -13,6 +11,7 @@ import {
 import type { CommuteType } from '../types/assistant';
 import type { DailyTask, DayPeriod } from '../types/planner';
 import { generateLowEmissionRoutines } from '../utils/dailyPlan';
+import { ChecklistItem } from './ChecklistItem';
 
 interface DailyPlanViewProps {
   tasks: DailyTask[];
@@ -137,36 +136,7 @@ export function DailyPlanView({
                   <ul className="space-y-2">
                     {periodTasks.map((task) => (
                       <li key={task.id}>
-                        <button
-                          type="button"
-                          onClick={() => onToggleTask(task.id)}
-                          aria-pressed={task.completed}
-                          className="w-full text-left flex items-start gap-2.5 p-2.5 rounded-lg bg-white border border-slate-200 hover:border-forest-300 transition-colors"
-                        >
-                          {task.completed ? (
-                            <CheckCircle2
-                              className="w-4 h-4 text-forest-700 shrink-0 mt-0.5"
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <Circle
-                              className="w-4 h-4 text-slate-400 shrink-0 mt-0.5"
-                              aria-hidden="true"
-                            />
-                          )}
-                          <div>
-                            <span
-                              className={`text-sm font-medium ${
-                                task.completed ? 'line-through text-slate-500' : 'text-slate-900'
-                              }`}
-                            >
-                              {task.title}
-                            </span>
-                            {task.description && (
-                              <p className="text-xs text-slate-600 mt-0.5">{task.description}</p>
-                            )}
-                          </div>
-                        </button>
+                        <ChecklistItem task={task} onToggle={onToggleTask} showDescription />
                       </li>
                     ))}
                   </ul>

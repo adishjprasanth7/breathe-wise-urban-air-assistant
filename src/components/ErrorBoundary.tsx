@@ -23,7 +23,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error('BreatheWise render error:', error, info.componentStack);
+    if (import.meta.env.DEV) {
+      console.error('BreatheWise render error:', error, info.componentStack);
+    }
   }
 
   render() {

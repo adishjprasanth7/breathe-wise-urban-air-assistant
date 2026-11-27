@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from './app.js';
 
@@ -30,12 +30,17 @@ const validPayload = {
 };
 
 describe('Express API (/api/health & /api/assistant)', () => {
-  it('returns health status without exposing secrets', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns health status and security CSP header without exposing secrets', async () => {
     const app = createApp({ geminiApiKey: '' });
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
     expect(res.body.aiConfigured).toBe(false);
+    expect(res.headers['content-security-policy']).toContain("default-src 'self'");
   });
 
   it('rejects invalid input with 400 status', async () => {
@@ -90,5 +95,46 @@ describe('Express API (/api/health & /api/assistant)', () => {
       .set('Host', 'breathewise-urban-air-quality.onrender.com')
       .set('Origin', 'https://untrusted.example.com');
     expect(untrusted.status).toBe(403);
+  });
+
+  it('uses Gemini response when configured and falls back gracefully on upstream error', async () => {
+    const app = createApp({ geminiApiKey: 'test-key-never-logged' });
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      riskSummary: 'Gemini risk summary',
+                      actionsToday: ['Action 1'],
+                      indoorProtection: ['Indoor 1'],
+                      outdoorRecommendations: ['Outdoor 1'],
+                      lowEmissionAlternatives: ['Alt 1'],
+                      estimatedImpact: '1.2 kg CO2e avoided',
+                      explanations: [{ action: 'Action 1', whyUseful: 'Reason 1' }],
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+
+    const aiRes = await request(app).post('/api/assistant').send(validPayload);
+    expect(aiRes.status).toBe(200);
+    expect(aiRes.body.source).toBe('gemini');
+    expect(aiRes.body.riskSummary).toBe('Gemini risk summary');
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('Upstream error', { status: 503 }));
+    const fallbackRes = await request(app).post('/api/assistant').send(validPayload);
+    expect(fallbackRes.status).toBe(200);
+    expect(fallbackRes.body.source).toBe('fallback');
   });
 });

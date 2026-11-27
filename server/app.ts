@@ -17,6 +17,7 @@ export interface AppConfig {
 
 export function createApp(config: AppConfig = {}) {
   const app = express();
+  app.set('trust proxy', 1);
 
   const allowedOrigins = (config.frontendUrl ?? process.env.FRONTEND_URL ?? 'http://localhost:5173')
     .split(',')
@@ -25,7 +26,22 @@ export function createApp(config: AppConfig = {}) {
 
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:'],
+          connectSrc: [
+            "'self'",
+            'https://air-quality-api.open-meteo.com',
+            'https://geocoding-api.open-meteo.com',
+          ],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
     })
   );
 

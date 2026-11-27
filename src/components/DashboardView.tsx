@@ -3,8 +3,6 @@ import {
   ShieldCheck,
   Wind,
   Sparkles,
-  CheckCircle2,
-  Circle,
   Leaf,
   AlertTriangle,
   Clock,
@@ -15,6 +13,7 @@ import type { AirQualityData } from '../types/aqi';
 import type { DailyTask } from '../types/planner';
 import { POLLUTANT_METADATA, getAqiMeta } from '../utils/aqi';
 import { ForecastChart } from './ForecastChart';
+import { ChecklistItem } from './ChecklistItem';
 
 export type NavTab =
   | 'dashboard'
@@ -88,6 +87,7 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
+      <h1 className="sr-only">Air Quality Dashboard</h1>
       {data.isDemoData && (
         <div
           role="status"
@@ -216,9 +216,14 @@ export function DashboardView({
                     <span className="text-xs font-bold text-forest-800 bg-forest-50 px-2 py-0.5 rounded-md">
                       {item.formula}
                     </span>
-                    <span title={item.description} className="text-slate-400">
+                    <button
+                      type="button"
+                      title={item.description}
+                      aria-label={`${item.name} (${item.formula}): ${item.description}`}
+                      className="text-slate-500 hover:text-forest-800 rounded p-0.5"
+                    >
                       <Info className="w-3.5 h-3.5" aria-hidden="true" />
-                    </span>
+                    </button>
                   </div>
                   <p className="text-xs text-slate-600 mt-2 font-medium">{item.name}</p>
                 </div>
@@ -305,30 +310,7 @@ export function DashboardView({
           <ul className="space-y-2.5">
             {tasks.slice(0, 4).map((task) => (
               <li key={task.id}>
-                <button
-                  type="button"
-                  onClick={() => onToggleTask(task.id)}
-                  aria-pressed={task.completed}
-                  className="w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                  {task.completed ? (
-                    <CheckCircle2 className="w-5 h-5 text-forest-700 shrink-0 mt-0.5" aria-hidden="true" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
-                  )}
-                  <div>
-                    <span
-                      className={`text-sm font-medium ${
-                        task.completed ? 'line-through text-slate-500' : 'text-slate-900'
-                      }`}
-                    >
-                      {task.title}
-                    </span>
-                    <span className="block text-xs text-slate-500 capitalize mt-0.5">
-                      {task.period}
-                    </span>
-                  </div>
-                </button>
+                <ChecklistItem task={task} onToggle={onToggleTask} showPeriod />
               </li>
             ))}
           </ul>
